@@ -1,3 +1,9 @@
+/***************************
+ * Set: Wifi Settings 
+ * thingspeak api_key
+ * TZ and DST offset
+ * tzDST for ISO8601
+ **************************/
 #include <ESPWiFi.h>
 #include <ESPHTTPClient.h>
 #include <JsonListener.h>
@@ -29,7 +35,7 @@ const char* WIFI_PWD = "13874029516";
  **************************/
 WiFiClient client;
 const char *host = "api.thingspeak.com";                  //IP address of the thingspeak server
-const char *api_key ="6F21LYFFCYATUDUS";                  //Your own thingspeak api_key
+const char *api_key ="6F21LYFFCYATUDUS";                  //Your own thingspeak api_key               //Your own thingspeak api_key
 const int httpPort = 80;
 #define pin 14       // ESP8266-12E  D5 read emperature and Humidity data
 int temp = 0; //temperature
@@ -49,12 +55,15 @@ const int Light_ADDR = 0b0100011;   // address:0x23
 const int Atom_ADDR = 0b1110111;  // address:0x77
 int tempLight = 0;
 int tempAtom = 0;
+float tempDisp = 0;
 
 /***************************
  * Begin Settings
  **************************/
-#define TZ              2       // (utc+) TZ in hours
+#define TZ              2        // (utc+) TZ in hours
 #define DST_MN          60      // use 60mn for summer time in some countries
+#define batchCount      20     // Number of readings to batch for upload
+String tzDST = "+1000";
 
 // Setup
 const int UPDATE_INTERVAL_SECS = 20 * 60; // Update every 20 minutes
@@ -74,14 +83,13 @@ const int SDA_PIN = GPIO0;
 const int SDC_PIN = GPIO2 
 #endif
 
-
 // OpenWeatherMap Settings
 // Sign up here to get an API key:
 // https://docs.thingpulse.com/how-tos/openweathermap-key/
 const boolean IS_METRIC = true;
 // Add your own thingpulse ID 
-String OPEN_WEATHER_MAP_APP_ID = "ed121a12e29d5b9d0e15a68de9a6f88e";
-String OPEN_WEATHER_MAP_LOCATION = "Zurich,CH";
+String OPEN_WEATHER_MAP_APP_ID = "2e33e79e861264a499798973da8ab722";
+String OPEN_WEATHER_MAP_LOCATION = "Swan%20Hill,AU";
 
 // Pick a language code from this list:
 // Arabic - ar, Bulgarian - bg, Catalan - ca, Czech - cz, German - de, Greek - el,
@@ -197,7 +205,7 @@ void setup() {
   ui.setIndicatorDirection(LEFT_RIGHT);
   // You can change the transition that is used
   // SLIDE_LEFT, SLIDE_RIGHT, SLIDE_TOP, SLIDE_DOWN
-  ui.setFrameAnimation(SLIDE_LEFT);
+  ui.setFrameAnimation(SLIDE_DOWN);
   ui.setFrames(frames, numberOfFrames);
   ui.setOverlays(overlays, numberOfOverlays);
   // Inital UI takes care of initalising the display too.
@@ -211,15 +219,15 @@ void setup() {
 }
 
 void loop() {  
-  //Read Temperature Humidity every 5 seconds
-  if(millis() - readTime > 5000){
+  //Read Temperature Humidity every 10 seconds
+  if(millis() - readTime > 10000){
     readTemperatureHumidity();
     readLight();
     readAtmosphere();
     readTime = millis();
   }
-  //Upload Temperature Humidity every 60 seconds
-  if(millis() - uploadTime > 60000){
+  //Upload Temperature Humidity every 30 seconds
+  if(millis() - uploadTime > 30000){
     uploadTemperatureHumidity();
     uploadTime = millis();
   }
@@ -341,7 +349,8 @@ void drawHeaderOverlay(OLEDDisplay *display, OLEDDisplayUiState* state) {
   display->setTextAlignment(TEXT_ALIGN_LEFT);
   display->drawString(0, 54, String(buff));
   display->setTextAlignment(TEXT_ALIGN_RIGHT);
-  String temp = String(currentWeather.temp, 1) + (IS_METRIC ? "°C" : "°F");
+  // String temp = String(currentWeather.temp, 1) + (IS_METRIC ? "°C" : "°F");
+  String temp = String(tempDisp, 1) + (IS_METRIC ? "°C" : "°F");
   display->drawString(128, 54, temp);
   display->drawHorizontalLine(0, 52, 128);
 }
@@ -411,6 +420,9 @@ bgn:
   //Temperature, 8-bit bit, converted to a value
   temp = chr[16] * 128 + chr[17] * 64 + chr[18] * 32 + chr[19] * 16 + chr[20] * 8 + chr[21] * 4 + chr[22] * 2 + chr[23];
 
+  //Collect temperature here for use on display
+  tempDisp = temp;
+
     Serial.print("temp:");
     Serial.print(temp);
     Serial.print("    humi:");
@@ -452,19 +464,43 @@ void convertTohPa (){
   tempAtom = tempAtom / 100;
 }
 
+// Time for log in ISO8601 format
+String logTime(){
+  time_t then;
+  then = time(nullptr);
+  struct tm* timeInfo;
+  timeInfo = localtime(&then);
+  char buff[26];
+  sprintf_P(buff, PSTR("%04d-%02d-%02d %02d:%02d:%02d %s"),timeInfo->tm_year + 1900, timeInfo->tm_mon+1, timeInfo->tm_mday, timeInfo->tm_hour, timeInfo->tm_min, timeInfo->tm_sec, tzDST.c_str());
+  String l_time = String(buff);
+  Serial.println(l_time);
+  return(l_time);
+}
+
+
 //upload temperature humidity data to thinkspak.com
 void uploadTemperatureHumidity(){
    if(!client.connect(host, httpPort)){
     Serial.println("connection failed");
     return;
   }
+
+  //log time
+  String l_time = "";
+  Serial.print("Log: ");
+  l_time = logTime();
+  
   // First convert to hPa
   convertTohPa();
+  
   // Three values(field1 field2 field3 field4) have been set in thingspeak.com 
-
   client.print(String("GET ") + "/update?api_key="+api_key+"&field1="+temp+"&field2="+humi + "&field3="+tempLight+"&field4="+tempAtom+" HTTP/1.1\r\n" +"Host: " + host + "\r\n" + "Connection: close\r\n\r\n");
   while(client.available()){
     String line = client.readStringUntil('\r');
     Serial.print(line);
   }
+  //log time
+  l_time = "";
+  Serial.print("Log sent: ");
+  l_time = logTime();
 }

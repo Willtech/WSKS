@@ -22,20 +22,28 @@
 #include "WeatherStationImages.h"
 #include <ESP8266WiFi.h>
 
+
+// Weather sensor
 #include <Adafruit_BMP085.h>
+
+
+// Voltmeter
+/*************************************************************************************************
+* https://www.hackster.io/yettiz/easy-voltmeter-with-esp8266-mini-d1-pro-with-oled-display-1a91dc
+*************************************************************************************************/
+
 
 /***************************
  * WIFI Settings
  **************************/
 const char* WIFI_SSID = "HFT";
 const char* WIFI_PWD = "13874029516";
-
 /***************************
  * Begin DHT11 Settings
  **************************/
 WiFiClient client;
 const char *host = "api.thingspeak.com";                  //IP address of the thingspeak server
-const char *api_key ="6F21LYFFCYATUDUS";                  //Your own thingspeak api_key               //Your own thingspeak api_key
+const char *api_key ="6F21LYFFCYATUDUS";                  //Your own thingspeak api_key               //Your own thingspeak api_key             //Your own thingspeak api_key               //Your own thingspeak api_key  
 const int httpPort = 80;
 #define pin 14       // ESP8266-12E  D5 read emperature and Humidity data
 int temp = 0; //temperature
@@ -56,6 +64,21 @@ const int Atom_ADDR = 0b1110111;  // address:0x77
 int tempLight = 0;
 int tempAtom = 0;
 float tempDisp = 0;
+
+/**************************
+ * Begin Voltmeter Settings 
+ **************************/
+void readVoltage();
+int analogInput = A0;
+
+float vout = 0.0;
+float vin = 0.0;
+float R1 = 100300;                // Resistor R1 100k 
+float R2 = 10140;                 // Resistor R2 10k
+int value = 0;
+String $vin = "0";
+long voltageTime = 0;
+
 
 /***************************
  * Begin Settings
@@ -82,6 +105,8 @@ const int SDC_PIN = D4;
 const int SDA_PIN = GPIO0;
 const int SDC_PIN = GPIO2 
 #endif
+
+//
 
 // OpenWeatherMap Settings
 // Sign up here to get an API key:
@@ -168,6 +193,9 @@ void setup() {
   Wire.write(0b00000001);
   Wire.endTransmission();
 
+  // initialize voltmeter
+  pinMode(analogInput, INPUT);
+  
   // initialize dispaly
   display.init();
   display.clear();
@@ -226,6 +254,13 @@ void loop() {
     readAtmosphere();
     readTime = millis();
   }
+  
+  //Read Voltage every 10 seconds
+  if(millis() - voltageTime > 10000){
+    readVoltage();
+    voltageTime = millis();
+  }
+  
   //Upload Temperature Humidity every 30 seconds
   if(millis() - uploadTime > 30000){
     uploadTemperatureHumidity();
@@ -459,6 +494,16 @@ void readAtmosphere(){
   Serial.println(" Pascal");
 }
 
+void readVoltage(){
+  value = analogRead(analogInput);
+  vout = (value * 3.3) / 1023.0;
+  vin = vout / (R2/(R1+R2));
+  $vin = String(vin);
+  Serial.print("Voltage = ");
+  Serial.print(vin,4);
+  Serial.println(" Volts");
+}
+
 // Convert Pa to hPa 
 void convertTohPa (){
   tempAtom = tempAtom / 100;
@@ -494,7 +539,7 @@ void uploadTemperatureHumidity(){
   convertTohPa();
   
   // Three values(field1 field2 field3 field4) have been set in thingspeak.com 
-  client.print(String("GET ") + "/update?api_key="+api_key+"&field1="+temp+"&field2="+humi + "&field3="+tempLight+"&field4="+tempAtom+" HTTP/1.1\r\n" +"Host: " + host + "\r\n" + "Connection: close\r\n\r\n");
+  client.print(String("GET ") + "/update?api_key="+api_key+"&field1="+temp+"&field2="+humi + "&field3="+tempLight+"&field4="+tempAtom+"&field5="+$vin+" HTTP/1.1\r\n" +"Host: " + host + "\r\n" + "Connection: close\r\n\r\n");
   while(client.available()){
     String line = client.readStringUntil('\r');
     Serial.print(line);

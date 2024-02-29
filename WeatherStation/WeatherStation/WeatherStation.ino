@@ -38,12 +38,13 @@
  **************************/
 const char* WIFI_SSID = "HFT";
 const char* WIFI_PWD = "13874029516";
-/***************************
+
+/*************************** 
  * Begin DHT11 Settings
  **************************/
 WiFiClient client;
 const char *host = "api.thingspeak.com";                  //IP address of the thingspeak server
-const char *api_key ="6F21LYFFCYATUDUS";                  //Your own thingspeak api_key               //Your own thingspeak api_key             //Your own thingspeak api_key               //Your own thingspeak api_key  
+const char *api_key ="6F21LYFFCYATUDUS";                  //Your own thingspeak api_key               //Your own thingspeak api_key
 const int httpPort = 80;
 #define pin 14       // ESP8266-12E  D5 read emperature and Humidity data
 int temp = 0; //temperature
@@ -73,8 +74,8 @@ int analogInput = A0;
 
 float vout = 0.0;
 float vin = 0.0;
-float R1 = 100300;                // Resistor R1 100k 
-float R2 = 10140;                 // Resistor R2 10k
+float R1 = 95650;                // Resistor R1 100k 
+float R2 = 10000;                 // Resistor R2 10k
 int value = 0;
 String $vin = "0";
 long voltageTime = 0;

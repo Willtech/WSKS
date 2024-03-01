@@ -8,4 +8,6 @@ Incorporates Voltmeter from this circuit and program *You will have to manually 
 
 These solar power kits can have additional solar panels. [Solar Panel Kit](https://www.ebay.com.au/itm/354249658561?mkcid=16&mkevt=1&mkrid=705-154756-20017-0&ssspo=-g7m1pidt5g&sssrc=4429486&ssuid=&var=&widget_ver=artemis&media=COPY)
 
+Builders forum: [Arduino projects](https://www.facebook.com/share/p/64Kx3KJNzXccEqwM/?mibextid=A7sQZp)
+
 Not affiliated with.

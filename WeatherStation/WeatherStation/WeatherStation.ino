@@ -502,6 +502,8 @@ void readVoltage(){
   vout = (value * vboard) / pcorrection;
   vin = vout / (R2/(R1+R2));
   $vin = String(vin);
+  // Serial.print("Raw reading =" );
+  // Serial.print(value);
   Serial.print("Voltage = ");
   Serial.print(vin,4);
   Serial.println(" Volts");

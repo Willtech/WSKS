@@ -74,7 +74,9 @@ int analogInput = A0;
 
 float vout = 0.0;
 float vin = 0.0;
-float R1 = 95650;                // Resistor R1 100k 
+float vboard = 3.3;               // mybe u must change the 3.3 to 5 and 
+float pcorrection = 1023;         // for the ESP32 u have to change the 1023 to 4095
+float R1 = 95650;                 // Resistor R1 100k 
 float R2 = 10000;                 // Resistor R2 10k
 int value = 0;
 String $vin = "0";
@@ -497,7 +499,7 @@ void readAtmosphere(){
 
 void readVoltage(){
   value = analogRead(analogInput);
-  vout = (value * 3.3) / 1023.0;
+  vout = (value * vboard) / pcorrection;
   vin = vout / (R2/(R1+R2));
   $vin = String(vin);
   Serial.print("Voltage = ");
